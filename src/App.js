@@ -1,6 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
+import { createClient } from "@supabase/supabase-js"; // Supabase kutubxonasi
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, Legend, CartesianGrid, PieChart, Pie } from "recharts";
+
+/* 
+  ═══════════ SUPABASE SOZLAMALARI ═══════════ 
+  Supabase'dan olingan URL va KEY ni bu yerga qo'ying
+*/
+const SUPABASE_URL = "https://fqgkujhvgvorrdlcjbnf.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxZ2t1amh2Z3ZvcnJkbGNqYm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MzMwOTgsImV4cCI6MjA5MTIwOTA5OH0.Xa9B3zt6oro-P7ygeG45sQJsK8K5ezX0T1feZ3np4GA";
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ═══════════ PLAN (static, monthly) ═══════════ */
 const PLAN_RAW = [
@@ -199,10 +208,22 @@ const fmt = n => { if (n >= 1e9) return (n / 1e9).toFixed(1) + " млрд"; if (
 const pc = p => p >= 80 ? "#2E7D32" : p >= 40 ? "#E65100" : p >= 15 ? "#F57F17" : "#C62828";
 const pb = p => p >= 80 ? "#E8F5E9" : p >= 40 ? "#FFF3E0" : p >= 15 ? "#FFFDE7" : "#FFEBEE";
 
-/* ═══════════ STORAGE ═══════════ */
+/* ═══════════ SUPABASE STORAGE ═══════════ */
 const sto = {
-  async get(k) { try { if (window.storage) { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; } } catch {} return null; },
-  async set(k, v) { try { if (window.storage) { await window.storage.set(k, JSON.stringify(v)); return true; } } catch {} return false; },
+  async get() {
+    try {
+      const { data, error } = await supabase.from("dashboard").select("content").eq("id", 1).single();
+      if (error) throw error;
+      return data ? JSON.parse(data.content) : null;
+    } catch (e) { console.error("DB Get Error:", e); return null; }
+  },
+  async set(v) {
+    try {
+      const { error } = await supabase.from("dashboard").upsert({ id: 1, content: JSON.stringify(v) });
+      if (error) throw error;
+      return true;
+    } catch (e) { console.error("DB Set Error:", e); return false; }
+  },
 };
 
 /* ═══════════ ADMIN MODAL ═══════════ */
@@ -222,9 +243,11 @@ function AdminModal({ onClose, onPublish, uploadDate }) {
     try {
       const parsed = parseExcel(await file.arrayBuffer());
       const data = buildData(parsed);
-      await sto.set("dashboard_data", data);
-      setSuccess(`✅ Muvaffaqiyat! ${data.daily.length} kun, ${data.regionSummary.length} region`);
-      setTimeout(() => { onPublish(data); onClose(); }, 1500);
+      const ok = await sto.set(data);
+      if (ok) {
+        setSuccess(`✅ Muvaffaqiyat! Ma'lumotlar serverga saqlandi.`);
+        setTimeout(() => { onPublish(data); onClose(); }, 1500);
+      } else throw new Error("Serverga saqlashda xatolik");
     } catch (e) { setErr("Xatolik: " + e.message); }
     setLoading(false);
   };
@@ -290,7 +313,12 @@ export default function App() {
   const [catFilter, setCatFilter] = useState("Все");
   const [tab, setTab] = useState("regions");
 
-  useEffect(() => { (async () => { const s = await sto.get("dashboard_data"); if (s) setData(s); })(); }, []);
+  useEffect(() => { 
+    (async () => { 
+      const s = await sto.get(); 
+      if (s) setData(s); 
+    })(); 
+  }, []);
 
   const filtered = useMemo(() => catFilter === "Все" ? data.regionSummary : data.regionSummary.filter(r => r.category === catFilter), [catFilter, data]);
   const fP = filtered.reduce((s, r) => s + r.plan, 0), fF = filtered.reduce((s, r) => s + r.fact, 0), fPct = fP ? (fF / fP * 100).toFixed(1) : 0;
