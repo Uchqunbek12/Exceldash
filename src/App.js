@@ -1,12 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
-import { createClient } from "@supabase/supabase-js"; // Supabase kutubxonasi
+import { createClient } from "@supabase/supabase-js";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, Legend, CartesianGrid, PieChart, Pie } from "recharts";
 
-/* 
-  ═══════════ SUPABASE SOZLAMALARI ═══════════ 
-  Supabase'dan olingan URL va KEY ni bu yerga qo'ying
-*/
+/* ═══════════ SUPABASE SOZLAMALARI ═══════════ */
 const SUPABASE_URL = "https://fqgkujhvgvorrdlcjbnf.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxZ2t1amh2Z3ZvcnJkbGNqYm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MzMwOTgsImV4cCI6MjA5MTIwOTA5OH0.Xa9B3zt6oro-P7ygeG45sQJsK8K5ezX0T1feZ3np4GA";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -46,66 +43,10 @@ const REGIONS = [...new Set(PLAN_RAW.map(p => p[0]))];
 const PLAN_AGENTS = [...new Set(PLAN_RAW.map(p => p[1]))];
 const CATS = ["Все", "Tashkent", "Солнечный", "Oblast"];
 
-/* ═══════════ INITIAL FACT DATA (060426.xlsx pre-parsed) ═══════════ */
+/* ═══════════ INITIAL FACT DATA ═══════════ */
 const INITIAL_DATA = {
-  totalPlan: 7400000000, totalFact: 1091110262, totalPct: 14.7, uploadDate: "06.04.2026",
-  orgSummary: [
-    { org: "DELI TORG", plan: 3564082686, fact: 497115118, pct: 13.9, color: "#E53935" },
-    { org: "GRAND TRADING", plan: 1658319104, fact: 499658332, pct: 30.1, color: "#1E88E5" },
-    { org: "SIGNUM", plan: 2177598210, fact: 94336812, pct: 4.3, color: "#F9A825" },
-  ],
-  regionSummary: [
-    { region: "Алмазар", category: "Tashkent", plan: 70490991, fact: 4173204, pct: 5.9, plan_akb: 9, fact_tochka: 4 },
-    { region: "Андижан", category: "Oblast", plan: 254417434, fact: 4102560, pct: 1.6, plan_akb: 7, fact_tochka: 1 },
-    { region: "Бектемир", category: "Tashkent", plan: 485589574, fact: 165098920, pct: 34.0, plan_akb: 3, fact_tochka: 5 },
-    { region: "Бухара", category: "Oblast", plan: 489500828, fact: 134252911, pct: 27.4, plan_akb: 14, fact_tochka: 8 },
-    { region: "Джиззах", category: "Oblast", plan: 68391236, fact: 4249000, pct: 6.2, plan_akb: 7, fact_tochka: 1 },
-    { region: "Каракалпакская р.", category: "Oblast", plan: 117409037, fact: 8094500, pct: 6.9, plan_akb: 6, fact_tochka: 2 },
-    { region: "Кашкадарья", category: "Oblast", plan: 208186398, fact: 2730550, pct: 1.3, plan_akb: 9, fact_tochka: 1 },
-    { region: "Коканд", category: "Oblast", plan: 109923854, fact: 0, pct: 0.0, plan_akb: 4, fact_tochka: 0 },
-    { region: "М.Улугбек", category: "Tashkent", plan: 318163715, fact: 52934041, pct: 16.6, plan_akb: 10, fact_tochka: 21 },
-    { region: "Мирабад", category: "Tashkent", plan: 119222263, fact: 25238745, pct: 21.2, plan_akb: 9, fact_tochka: 3 },
-    { region: "Навои", category: "Oblast", plan: 254983736, fact: 38803357, pct: 15.2, plan_akb: 7, fact_tochka: 6 },
-    { region: "Наманган", category: "Oblast", plan: 364735289, fact: 19798000, pct: 5.4, plan_akb: 8, fact_tochka: 1 },
-    { region: "Самарканд", category: "Oblast", plan: 927448182, fact: 27082256, pct: 2.9, plan_akb: 10, fact_tochka: 3 },
-    { region: "Сергели", category: "Tashkent", plan: 97454080, fact: 38333287, pct: 39.3, plan_akb: 6, fact_tochka: 7 },
-    { region: "Солнечный", category: "Солнечный", plan: 1275817432, fact: 82307796, pct: 6.5, plan_akb: 22, fact_tochka: 10 },
-    { region: "Сурхандарья", category: "Oblast", plan: 62789760, fact: 5004000, pct: 8.0, plan_akb: 9, fact_tochka: 1 },
-    { region: "Сырдарья", category: "Oblast", plan: 35605535, fact: 0, pct: 0.0, plan_akb: 2, fact_tochka: 0 },
-    { region: "Таш. область", category: "Oblast", plan: 129860260, fact: 10238858, pct: 7.9, plan_akb: 12, fact_tochka: 3 },
-    { region: "Учтепа", category: "Tashkent", plan: 106458650, fact: 124169114, pct: 116.6, plan_akb: 7, fact_tochka: 3 },
-    { region: "Фергана", category: "Oblast", plan: 320018663, fact: 2584500, pct: 0.8, plan_akb: 10, fact_tochka: 1 },
-    { region: "Хорезм", category: "Oblast", plan: 315296987, fact: 10733644, pct: 3.4, plan_akb: 10, fact_tochka: 3 },
-    { region: "Чиланзар", category: "Tashkent", plan: 495793395, fact: 4856476, pct: 1.0, plan_akb: 12, fact_tochka: 3 },
-    { region: "Шайхантахур", category: "Tashkent", plan: 317488178, fact: 252498717, pct: 79.5, plan_akb: 12, fact_tochka: 4 },
-    { region: "Юнусабад", category: "Tashkent", plan: 256888113, fact: 65584265, pct: 25.5, plan_akb: 12, fact_tochka: 5 },
-    { region: "Яккасарай", category: "Tashkent", plan: 62363406, fact: 130311, pct: 0.2, plan_akb: 6, fact_tochka: 1 },
-    { region: "Яшнабад", category: "Tashkent", plan: 135703004, fact: 8111250, pct: 6.0, plan_akb: 7, fact_tochka: 7 },
-  ],
-  agentSummary: [
-    { agent: "Анвар", regions: "Солнечный", plan: 493886798, fact: 18117636, pct: 3.7, plan_akb: 6, fact_tochka: 2 },
-    { agent: "Жонибек", regions: "Солнечный", plan: 447102721, fact: 28315828, pct: 6.3, plan_akb: 6, fact_tochka: 1 },
-    { agent: "Фаррух", regions: "Солнечный", plan: 334827913, fact: 16435420, pct: 4.9, plan_akb: 10, fact_tochka: 5 },
-    { agent: "Ахмаджон", regions: "Учтепа, Чиланзар", plan: 602252045, fact: 129025590, pct: 21.4, plan_akb: 19, fact_tochka: 6 },
-    { agent: "Абдулбосид", regions: "Алмазар, Шайхантахур", plan: 387979169, fact: 256671921, pct: 66.2, plan_akb: 21, fact_tochka: 8 },
-    { agent: "Абдурахмон", regions: "Яшнабад", plan: 135703004, fact: 8111250, pct: 6.0, plan_akb: 7, fact_tochka: 7 },
-    { agent: "Рихсивой", regions: "Бектемир, Мирабад", plan: 604811837, fact: 190337665, pct: 31.5, plan_akb: 12, fact_tochka: 6 },
-    { agent: "Умида", regions: "Сергели, Яккасарай", plan: 159817486, fact: 38463598, pct: 24.1, plan_akb: 12, fact_tochka: 7 },
-    { agent: "Хусан", regions: "М.Улугбек, Юнусабад", plan: 575051827, fact: 118518306, pct: 20.6, plan_akb: 22, fact_tochka: 17 },
-    { agent: "Бобурбек", regions: "Андижан, Коканд, Фергана", plan: 684359951, fact: 6687060, pct: 1.0, plan_akb: 21, fact_tochka: 2 },
-    { agent: "Даврон", regions: "Каракалпакия, Наманган", plan: 482144326, fact: 27892500, pct: 5.8, plan_akb: 14, fact_tochka: 2 },
-    { agent: "Расул", regions: "Джиззах, Кашкадарья, Сырдарья", plan: 312183170, fact: 6979550, pct: 2.2, plan_akb: 18, fact_tochka: 2 },
-    { agent: "Хамид", regions: "Самарканд, Хорезм", plan: 1242745169, fact: 37815900, pct: 3.0, plan_akb: 20, fact_tochka: 6 },
-    { agent: "Шахбоз", regions: "Бухара, Навои, Сурхандарья", plan: 807274324, fact: 178060268, pct: 22.1, plan_akb: 30, fact_tochka: 7 },
-    { agent: "Жалолиддин", regions: "Таш. область", plan: 129860260, fact: 9361038, pct: 7.2, plan_akb: 12, fact_tochka: 3 },
-  ],
-  daily: [
-    { date: "01.04.2026", dateLabel: "01 Апр", DT: 146023772, GT: 173613622, SG: 19579412, total: 339216806 },
-    { date: "02.04.2026", dateLabel: "02 Апр", DT: 114575287, GT: 218493658, SG: 38395352, total: 371464297 },
-    { date: "03.04.2026", dateLabel: "03 Апр", DT: 235148464, GT: 30155847, SG: 27916700, total: 293221011 },
-    { date: "04.04.2026", dateLabel: "04 Апр", DT: 1367595, GT: 34820837, SG: 6642068, total: 42830500 },
-    { date: "06.04.2026", dateLabel: "06 Апр", DT: 0, GT: 42574368, SG: 1803280, total: 44377648 },
-  ],
+  totalPlan: 0, totalFact: 0, totalPct: 0, uploadDate: "",
+  orgSummary: [], regionSummary: [], agentSummary: [], daily: []
 };
 
 /* ═══════════ AGENT NORMALIZER ═══════════ */
@@ -159,8 +100,7 @@ function parseExcel(buf) {
     if (cA?.mapped && aT[cA.mapped]) aT[cA.mapped].add(s);
   }
   return { 
-    rF, 
-    aF, 
+    rF, aF, 
     rT: Object.fromEntries(Object.entries(rT).map(([k, v]) => [k, v.size])), 
     aT: Object.fromEntries(Object.entries(aT).map(([k, v]) => [k, v.size])),
     daily 
@@ -212,7 +152,7 @@ const pb = p => p >= 80 ? "#E8F5E9" : p >= 40 ? "#FFF3E0" : p >= 15 ? "#FFFDE7" 
 const sto = {
   async get() {
     try {
-      const { data, error } = await supabase.from("dashboard").select("content").eq("id", 1).single();
+      const { data, error } = await supabase.from("dashboard").select("content").eq("id", 1).maybeSingle();
       if (error) throw error;
       return data ? JSON.parse(data.content) : null;
     } catch (e) { console.error("DB Get Error:", e); return null; }
@@ -245,7 +185,7 @@ function AdminModal({ onClose, onPublish, uploadDate }) {
       const data = buildData(parsed);
       const ok = await sto.set(data);
       if (ok) {
-        setSuccess(`✅ Muvaffaqiyat! Ma'lumotlar serverga saqlandi.`);
+        setSuccess(`✅ Muvaffaqiyat! Serverga saqlandi.`);
         setTimeout(() => { onPublish(data); onClose(); }, 1500);
       } else throw new Error("Serverga saqlashda xatolik");
     } catch (e) { setErr("Xatolik: " + e.message); }
@@ -320,10 +260,14 @@ export default function App() {
     })(); 
   }, []);
 
-  const filtered = useMemo(() => catFilter === "Все" ? data.regionSummary : data.regionSummary.filter(r => r.category === catFilter), [catFilter, data]);
+  const filtered = useMemo(() => {
+    if (!data.regionSummary) return [];
+    return catFilter === "Все" ? data.regionSummary : data.regionSummary.filter(r => r.category === catFilter);
+  }, [catFilter, data]);
+
   const fP = filtered.reduce((s, r) => s + r.plan, 0), fF = filtered.reduce((s, r) => s + r.fact, 0), fPct = fP ? (fF / fP * 100).toFixed(1) : 0;
-  const top5 = useMemo(() => [...data.regionSummary].sort((a, b) => b.pct - a.pct).slice(0, 5), [data]);
-  const bot5 = useMemo(() => [...data.regionSummary].sort((a, b) => a.pct - b.pct).slice(0, 5), [data]);
+  const top5 = useMemo(() => data.regionSummary ? [...data.regionSummary].sort((a, b) => b.pct - a.pct).slice(0, 5) : [], [data]);
+  const bot5 = useMemo(() => data.regionSummary ? [...data.regionSummary].sort((a, b) => a.pct - b.pct).slice(0, 5) : [], [data]);
 
   return (
     <div style={{ fontFamily: "'Merriweather Sans',sans-serif", background: "#FAFBFE", color: "#1a1a2e", minHeight: "100vh" }}>
@@ -362,7 +306,7 @@ export default function App() {
         <div style={{ position: "relative", zIndex: 1 }}>
           <h1 className="pf" style={{ fontSize: 26, fontWeight: 800 }}>Апрель 2026 — Сотув Аналитикаси</h1>
           <p style={{ opacity: .75, fontSize: 13, marginTop: 6 }}>
-            {data.daily.length} кун · 3 ташкилот · {data.regionSummary.length} регион · {data.agentSummary.length} агент
+            {data.daily?.length || 0} кун · 3 ташкилот · {data.regionSummary?.length || 0} регион · {data.agentSummary?.length || 0} агент
             {data.uploadDate && <span> · Янгиланган: {data.uploadDate}</span>}
           </p>
         </div>
@@ -372,10 +316,10 @@ export default function App() {
         {/* KPIs */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 24 }} className="an">
           {[
-            { l: "Умумий план", v: fmt(data.totalPlan), s: "Апрель 2026", c: "#1565C0", i: "🎯" },
-            { l: "Факт сотув", v: fmt(data.totalFact), s: data.totalPct + "% бажарилган", c: "#2E7D32", i: "💰" },
-            { l: "Қолган сумма", v: fmt(data.totalPlan - data.totalFact), s: (100 - data.totalPct).toFixed(1) + "% қолди", c: "#E65100", i: "📉" },
-            { l: "Торг. точкалар", v: data.regionSummary.reduce((s, r) => s + r.fact_tochka, 0), s: "АКБ: " + data.regionSummary.reduce((s, r) => s + r.plan_akb, 0), c: "#AD1457", i: "🏪" },
+            { l: "Умумий план", v: fmt(data.totalPlan || 0), s: "Апрель 2026", c: "#1565C0", i: "🎯" },
+            { l: "Факт сотув", v: fmt(data.totalFact || 0), s: (data.totalPct || 0) + "% бажарилган", c: "#2E7D32", i: "💰" },
+            { l: "Қолган сумма", v: fmt((data.totalPlan || 0) - (data.totalFact || 0)), s: (100 - (data.totalPct || 0)).toFixed(1) + "% қолди", c: "#E65100", i: "📉" },
+            { l: "Торг. точкалар", v: data.regionSummary?.reduce((s, r) => s + r.fact_tochka, 0) || 0, s: "АКБ: " + (data.regionSummary?.reduce((s, r) => s + r.plan_akb, 0) || 0), c: "#AD1457", i: "🏪" },
           ].map((k, i) => (
             <div key={i} className="kp"><div className="st" style={{ background: k.c }} />
               <div style={{ paddingLeft: 12 }}>
@@ -390,7 +334,7 @@ export default function App() {
 
         {/* ORG CARDS */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 24 }} className="an">
-          {data.orgSummary.map((o, i) => {
+          {data.orgSummary?.map((o, i) => {
             const r = 40, circ = 2 * Math.PI * r, off = circ - (Math.min(o.pct, 100) / 100) * circ;
             return (
               <div key={i} className="cd" style={{ display: "flex", alignItems: "center", gap: 18, borderTop: `4px solid ${o.color}` }}>
@@ -415,7 +359,7 @@ export default function App() {
         <div className="cd an" style={{ marginBottom: 24, padding: 22 }}>
           <h3 className="pf" style={{ fontSize: 18, fontWeight: 700, marginBottom: 18, color: "#263238" }}>Кунлик сотув динамикаси</h3>
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={data.daily}>
+            <LineChart data={data.daily || []}>
               <CartesianGrid strokeDasharray="4 4" stroke="#E0E0E0" />
               <XAxis dataKey="dateLabel" tick={{ fill: "#78909C", fontSize: 12, fontWeight: 600 }} />
               <YAxis tick={{ fill: "#78909C", fontSize: 10 }} tickFormatter={fmt} />
@@ -479,7 +423,7 @@ export default function App() {
               <th>#</th><th>Регион</th><th>Категория</th><th style={{ textAlign: "right" }}>План</th><th style={{ textAlign: "right" }}>Факт</th>
               <th style={{ textAlign: "center" }}>АКБ</th><th style={{ textAlign: "center" }}>Точки</th><th style={{ width: 110 }}>Прогресс</th><th style={{ textAlign: "right" }}>%</th>
             </tr></thead><tbody>
-              {[...filtered].sort((a, b) => b.pct - a.pct).map((r, i) => (
+              {filtered.sort((a, b) => b.pct - a.pct).map((r, i) => (
                 <tr key={i}>
                   <td style={{ color: "#B0BEC5", fontWeight: 700 }}>{i + 1}</td>
                   <td style={{ fontWeight: 600, color: "#263238" }}>{r.region}</td>
@@ -503,7 +447,7 @@ export default function App() {
               <th>#</th><th>Агент</th><th>Регионлар</th><th style={{ textAlign: "right" }}>План</th><th style={{ textAlign: "right" }}>Факт</th>
               <th style={{ textAlign: "center" }}>АКБ</th><th style={{ textAlign: "center" }}>Точки</th><th style={{ width: 110 }}>Прогресс</th><th style={{ textAlign: "right" }}>%</th>
             </tr></thead><tbody>
-              {[...data.agentSummary].sort((a, b) => b.pct - a.pct).map((a, i) => (
+              {(data.agentSummary || []).sort((a, b) => b.pct - a.pct).map((a, i) => (
                 <tr key={i}>
                   <td style={{ color: "#B0BEC5", fontWeight: 700 }}>{i + 1}</td>
                   <td style={{ fontWeight: 700, color: "#263238" }}>{a.agent}</td>
@@ -524,7 +468,7 @@ export default function App() {
         <div className="cd an" style={{ marginTop: 24, padding: 22 }}>
           <h3 className="pf" style={{ fontSize: 18, fontWeight: 700, marginBottom: 18, color: "#263238" }}>Регионлар — План ва Факт</h3>
           <ResponsiveContainer width="100%" height={360}>
-            <BarChart data={[...data.regionSummary].sort((a, b) => b.fact - a.fact).slice(0, 10)} layout="vertical">
+            <BarChart data={data.regionSummary ? [...data.regionSummary].sort((a, b) => b.fact - a.fact).slice(0, 10) : []} layout="vertical">
               <CartesianGrid strokeDasharray="4 4" stroke="#E0E0E0" />
               <XAxis type="number" tick={{ fill: "#78909C", fontSize: 10 }} tickFormatter={fmt} />
               <YAxis type="category" dataKey="region" tick={{ fill: "#455A64", fontSize: 11, fontWeight: 600 }} width={100} />
@@ -542,9 +486,9 @@ export default function App() {
             <h3 className="pf" style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, color: "#263238" }}>Факт бўйича улуш</h3>
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
-                <Pie data={data.orgSummary} dataKey="fact" nameKey="org" cx="50%" cy="50%" outerRadius={85} innerRadius={42}
+                <Pie data={data.orgSummary || []} dataKey="fact" nameKey="org" cx="50%" cy="50%" outerRadius={85} innerRadius={42}
                   label={({ org, pct }) => `${org} ${pct}%`} labelLine={{ stroke: "#B0BEC5" }} strokeWidth={2} stroke="#fff">
-                  {data.orgSummary.map((o, i) => <Cell key={i} fill={o.color} />)}
+                  {data.orgSummary?.map((o, i) => <Cell key={i} fill={o.color} />)}
                 </Pie>
                 <Tooltip formatter={v => [fmt(v), ""]} />
               </PieChart>
@@ -553,11 +497,11 @@ export default function App() {
           <div className="cd an" style={{ padding: 22 }}>
             <h3 className="pf" style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, color: "#263238" }}>Хулоса</h3>
             <div style={{ fontSize: 13.5, lineHeight: 2.2, color: "#455A64" }}>
-              <div>🔴 Жами: <b style={{ color: pc(data.totalPct), fontSize: 15 }}>{data.totalPct}%</b></div>
-              {(() => { const b = [...data.regionSummary].sort((a, b) => b.pct - a.pct)[0]; return b ? <div>🟢 Энг яхши: <b style={{ color: "#2E7D32" }}>{b.region} — {b.pct}%</b></div> : null; })()}
-              {data.orgSummary.map((o, i) => <div key={i}>{["🔴","🔵","🟡"][i]} {o.org}: <b style={{ color: o.color }}>{o.pct}%</b></div>)}
-              {(() => { const b = [...data.agentSummary].sort((a, b) => b.pct - a.pct)[0]; return b ? <div>👤 Топ: <b style={{ color: "#AD1457" }}>{b.agent} — {b.pct}%</b></div> : null; })()}
-              {(() => { const z = data.regionSummary.filter(r => r.pct === 0); return z.length ? <div>⚠️ 0%: <b style={{ color: "#C62828" }}>{z.map(r => r.region).join(", ")}</b></div> : null; })()}
+              <div>🔴 Жами: <b style={{ color: pc(data.totalPct || 0), fontSize: 15 }}>{data.totalPct || 0}%</b></div>
+              {(() => { const b = data.regionSummary ? [...data.regionSummary].sort((a, b) => b.pct - a.pct)[0] : null; return b ? <div>🟢 Энг яхши: <b style={{ color: "#2E7D32" }}>{b.region} — {b.pct}%</b></div> : null; })()}
+              {data.orgSummary?.map((o, i) => <div key={i}>{["🔴","🔵","🟡"][i]} {o.org}: <b style={{ color: o.color }}>{o.pct}%</b></div>)}
+              {(() => { const b = data.agentSummary ? [...data.agentSummary].sort((a, b) => b.pct - a.pct)[0] : null; return b ? <div>👤 Топ: <b style={{ color: "#AD1457" }}>{b.agent} — {b.pct}%</b></div> : null; })()}
+              {(() => { const z = data.regionSummary?.filter(r => r.pct === 0) || []; return z.length ? <div>⚠️ 0%: <b style={{ color: "#C62828" }}>{z.map(r => r.region).join(", ")}</b></div> : null; })()}
             </div>
           </div>
         </div>
