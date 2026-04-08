@@ -1,8 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-<<<<<<< HEAD
-=======
-
->>>>>>> da2ef0a6f19a2000c04c4841bc0bd5eee08e2d05
 import * as XLSX from "xlsx";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, Legend, CartesianGrid, PieChart, Pie } from "recharts";
 
