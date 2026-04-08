@@ -149,7 +149,13 @@ function parseExcel(buf) {
     if (cR && rT[cR]) rT[cR].add(s);
     if (cA?.mapped && aT[cA.mapped]) aT[cA.mapped].add(s);
   }
-  return { rF, aF, rT: Object.fromEntries(Object.entries(rT).map(([k, v]) => [k, v.size])), aT: Object.fromEntries(Object.entries(aT).map(([k, v]) => [k, v.size])), daily };
+  return { 
+    rF, 
+    aF, 
+    rT: Object.fromEntries(Object.entries(rT).map(([k, v]) => [k, v.size])), 
+    aT: Object.fromEntries(Object.entries(aT).map(([k, v]) => [k, v.size])),
+    daily 
+  };
 }
 
 function buildData(f) {
@@ -283,9 +289,8 @@ export default function App() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [catFilter, setCatFilter] = useState("Все");
   const [tab, setTab] = useState("regions");
-  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => { (async () => { const s = await sto.get("dashboard_data"); if (s) setData(s); setLoaded(true); })(); }, []);
+  useEffect(() => { (async () => { const s = await sto.get("dashboard_data"); if (s) setData(s); })(); }, []);
 
   const filtered = useMemo(() => catFilter === "Все" ? data.regionSummary : data.regionSummary.filter(r => r.category === catFilter), [catFilter, data]);
   const fP = filtered.reduce((s, r) => s + r.plan, 0), fF = filtered.reduce((s, r) => s + r.fact, 0), fPct = fP ? (fF / fP * 100).toFixed(1) : 0;
@@ -312,8 +317,8 @@ export default function App() {
         td{padding:11px 12px;font-size:13px;border-bottom:1px solid #F0F0F0}
         tr:hover td{background:#F8FAFF}
         .br{height:7px;border-radius:4px;background:#ECEFF1;overflow:hidden;min-width:80px}
-        .fl{height:100%;border-radius:4px;transition:width .8s ease}
-        .bg{font-size:10px;padding:3px 9px;border-radius:12px;font-weight:700;letter-spacing:.4px}
+        .fl{height:100%;border-radius:4px;transition:width .5s ease-out}
+        .bg{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase}
         .pf{font-family:'Playfair Display',serif}
         @keyframes fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         .an{animation:fu .45s ease forwards}
@@ -494,8 +499,8 @@ export default function App() {
             <BarChart data={[...data.regionSummary].sort((a, b) => b.fact - a.fact).slice(0, 10)} layout="vertical">
               <CartesianGrid strokeDasharray="4 4" stroke="#E0E0E0" />
               <XAxis type="number" tick={{ fill: "#78909C", fontSize: 10 }} tickFormatter={fmt} />
-              <YAxis type="category" dataKey="region" tick={{ fill: "#455A64", fontSize: 11, fontWeight: 500 }} width={120} />
-              <Tooltip contentStyle={{ background: "#FFF", border: "1px solid #E0E0E0", borderRadius: 10, fontSize: 12 }} formatter={v => [fmt(v), ""]} />
+              <YAxis type="category" dataKey="region" tick={{ fill: "#455A64", fontSize: 11, fontWeight: 600 }} width={100} />
+              <Tooltip formatter={v => [fmt(v), ""]} />
               <Legend wrapperStyle={{ fontSize: 11, fontWeight: 600 }} />
               <Bar dataKey="plan" fill="#BBDEFB" name="План" radius={[0, 4, 4, 0]} />
               <Bar dataKey="fact" fill="#1565C0" name="Факт" radius={[0, 4, 4, 0]} />
