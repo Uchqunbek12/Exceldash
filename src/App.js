@@ -494,7 +494,7 @@ export default function App() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 24 }}>
           <div className="cd an" style={{ padding: 22 }}>
             <h3 className="pf" style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, color: "#263238" }}>Факт бўйича улуш</h3>
-            <ResponsiveContainer width="100%" height={210}>
+            <ResponsiveContainer width="100%" height={230}>
               <PieChart>
                 <Pie data={data.orgSummary || []} dataKey="fact" nameKey="org" cx="50%" cy="50%" outerRadius={85} innerRadius={35}
                   label={({ org, pct }) => `${org} ${pct}%`} labelLine={{ stroke: "#B0BEC5" }} strokeWidth={2} stroke="#fff">
