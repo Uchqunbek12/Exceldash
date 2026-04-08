@@ -319,8 +319,18 @@ export default function App() {
             { l: "Умумий план", v: fmt(data.totalPlan || 0), s: "Апрель 2026", c: "#1565C0", i: "🎯" },
             { l: "Факт сотув", v: fmt(data.totalFact || 0), s: (data.totalPct || 0) + "% бажарилган", c: "#2E7D32", i: "💰" },
             { l: "Қолган сумма", v: fmt((data.totalPlan || 0) - (data.totalFact || 0)), s: (100 - (data.totalPct || 0)).toFixed(1) + "% қолди", c: "#E65100", i: "📉" },
-            { l: "Торг. точкалар", v: data.regionSummary?.reduce((s, r) => s + r.fact_tochka, 0) || 0, s: "АКБ: " + (data.regionSummary?.reduce((s, r) => s + r.plan_akb, 0) || 0), c: "#AD1457", i: "🏪" },
-          ].map((k, i) => (
+            { 
+              l: "Торг. точкалар", 
+              v: data.regionSummary?.reduce((s, r) => s + r.fact_tochka, 0) || 0, 
+              s: (() => {
+                const fact = data.regionSummary?.reduce((s, r) => s + r.fact_tochka, 0) || 0;
+                const plan = data.regionSummary?.reduce((s, r) => s + r.plan_akb, 0) || 0;
+                const pct = plan ? (fact / plan * 100).toFixed(1) : 0;
+                return `АКБ: ${plan} (${pct}%)`;
+              })(), 
+              c: "#AD1457", 
+              i: "🏪" 
+            },          ].map((k, i) => (
             <div key={i} className="kp"><div className="st" style={{ background: k.c }} />
               <div style={{ paddingLeft: 12 }}>
                 <div style={{ fontSize: 10.5, color: "#90A4AE", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>{k.l}</div>
@@ -484,9 +494,9 @@ export default function App() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 24 }}>
           <div className="cd an" style={{ padding: 22 }}>
             <h3 className="pf" style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, color: "#263238" }}>Факт бўйича улуш</h3>
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={210}>
               <PieChart>
-                <Pie data={data.orgSummary || []} dataKey="fact" nameKey="org" cx="50%" cy="50%" outerRadius={85} innerRadius={42}
+                <Pie data={data.orgSummary || []} dataKey="fact" nameKey="org" cx="50%" cy="50%" outerRadius={85} innerRadius={35}
                   label={({ org, pct }) => `${org} ${pct}%`} labelLine={{ stroke: "#B0BEC5" }} strokeWidth={2} stroke="#fff">
                   {data.orgSummary?.map((o, i) => <Cell key={i} fill={o.color} />)}
                 </Pie>
