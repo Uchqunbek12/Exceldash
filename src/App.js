@@ -8,11 +8,33 @@ const SUPABASE_URL = "https://fqgkujhvgvorrdlcjbnf.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxZ2t1amh2Z3ZvcnJkbGNqYm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MzMwOTgsImV4cCI6MjA5MTIwOTA5OH0.Xa9B3zt6oro-P7ygeG45sQJsK8K5ezX0T1feZ3np4GA";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+/* ═══════════ ISH KUNLARI HISOBLAGICH ═══════════ */
+function getWorkDayInfo() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0-based
+  const today = now.getDate();
+
+  let totalWorkDays = 0;
+  let elapsedWorkDays = 0;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const day = new Date(year, month, d).getDay(); // 0=Sun, 6=Sat
+    if (day !== 0 && day !== 6) {
+      totalWorkDays++;
+      if (d <= today) elapsedWorkDays++;
+    }
+  }
+
+  return { totalWorkDays, elapsedWorkDays };
+}
+
 /* ═══════════ PLAN (static, monthly) ═══════════ */
 const PLAN_RAW = [
   ["Солнечный","Анвар (агент)",122213328,124912698,246760772,6,"Солнечный"],
   ["Солнечный","Жонибек (агент)",245254384,79063266,122785071,6,"Солнечный"],
-  ["Солнечный","Фаррух (агент)",89836662,183316579,61674672,10,"Солнечный"],
+  ["Солнечный","Фарruх (агент)",89836662,183316579,61674672,10,"Солнечный"],
   ["Чиланзар","Ахмаджон (менеджер)",165323494,170349513,160120389,12,"Tashkent"],
   ["Учтепа","Ахмаджон (менеджер)",45168038,27892531,33398080,7,"Tashkent"],
   ["Алмазар","Абдулбосид (агент)",44583451,11601279,14306262,9,"Tashkent"],
@@ -25,8 +47,8 @@ const PLAN_RAW = [
   ["М.Улугбек","Хусан (агент)",98732587,100218352,119212776,10,"Tashkent"],
   ["Юнусабад","Хусан (агент)",84639250,79903669,92345193,12,"Tashkent"],
   ["Андижан","Бобурбек (агент)",114642412,54418282,85356741,7,"Oblast"],
-  ["Коканд","Бобурбек (агент)",63408957,19512441,27002456,4,"Oblast"],
-  ["Фергана","Бобурбек (агент)",180954648,57875599,81188416,10,"Oblast"],
+  ["Коканд","Бobурбек (агент)",63408957,19512441,27002456,4,"Oblast"],
+  ["Фергана","Бobурбек (агент)",180954648,57875599,81188416,10,"Oblast"],
   ["Каракалпакская республика","Даврон (ТП)",74738283,19362402,23308351,6,"Oblast"],
   ["Наманган","Даврон (ТП)",213612751,58550884,92571654,8,"Oblast"],
   ["Джиззах","Расул (ТП)",37737509,10535528,20118199,7,"Oblast"],
@@ -148,6 +170,13 @@ const fmt = n => { if (n >= 1e9) return (n / 1e9).toFixed(1) + " млрд"; if (
 const pc = p => p >= 80 ? "#2E7D32" : p >= 40 ? "#E65100" : p >= 15 ? "#F57F17" : "#C62828";
 const pb = p => p >= 80 ? "#E8F5E9" : p >= 40 ? "#FFF3E0" : p >= 15 ? "#FFFDE7" : "#FFEBEE";
 
+/* ═══════════ FORECAST HELPER ═══════════ */
+function calcForecast(fact, plan, elapsedWorkDays, totalWorkDays) {
+  if (!elapsedWorkDays || !plan) return 0;
+  const projected = (fact / elapsedWorkDays) * totalWorkDays;
+  return Math.round(projected / plan * 1000) / 10;
+}
+
 /* ═══════════ SUPABASE STORAGE ═══════════ */
 const sto = {
   async get() {
@@ -177,9 +206,17 @@ function AdminModal({ onClose, onPublish, uploadDate }) {
   const [dragOver, setDragOver] = useState(false);
 
   const login = () => { if (pass === "1234") { setStep("upload"); setErr(""); } else setErr("Parol noto'g'ri!"); };
-  const handleFile = f => { if (f && /\.xlsx?$/i.test(f.name)) { setFile(f); setErr(""); } else setErr("Faqat .xlsx fayl!"); };
+  
+  const handleFileChange = (selectedFile) => {
+    if (!selectedFile) return;
+    setFile(selectedFile);
+    setErr("");
+  };
+
   const publish = async () => {
-    if (!file) return; setLoading(true); setErr("");
+    if (!file) return;
+    setLoading(true);
+    setErr("");
     try {
       const parsed = parseExcel(await file.arrayBuffer());
       const data = buildData(parsed);
@@ -216,13 +253,13 @@ function AdminModal({ onClose, onPublish, uploadDate }) {
             <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, color: "#263238", margin: "0 0 6px" }}>Faylni yuklash</h2>
             <p style={{ color: "#90A4AE", fontSize: 13, marginBottom: 20 }}>1C dan olingan Excel ni tanlang</p>
           </div>
-          <div className={`uz ${dragOver ? "dr" : ""}`}
+          <div
             onClick={() => document.getElementById("fu").click()}
             onDragOver={e => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
-            onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
+            onDrop={e => { e.preventDefault(); setDragOver(false); handleFileChange(e.dataTransfer.files[0]); }}
             style={{ border: `3px dashed ${dragOver ? "#1565C0" : "#BBDEFB"}`, borderRadius: 14, padding: "32px 16px", cursor: "pointer", textAlign: "center", background: dragOver ? "#E3F2FD" : "#F8FBFF", transition: "all 0.2s" }}>
-            <input id="fu" type="file" accept=".xlsx,.xls" style={{ display: "none" }} onChange={e => handleFile(e.target.files[0])} />
+            <input id="fu" type="file" accept=".xlsx,.xls" style={{ display: "none" }} onChange={e => handleFileChange(e.target.files[0])} />
             {file ? (<>
               <div style={{ fontSize: 32 }}>📊</div>
               <div style={{ fontWeight: 600, color: "#263238", marginTop: 6 }}>{file.name}</div>
@@ -253,6 +290,9 @@ export default function App() {
   const [catFilter, setCatFilter] = useState("Все");
   const [tab, setTab] = useState("regions");
 
+  // ISH KUNLARI
+  const { totalWorkDays, elapsedWorkDays } = getWorkDayInfo();
+
   useEffect(() => { 
     (async () => { 
       const s = await sto.get(); 
@@ -263,14 +303,23 @@ export default function App() {
   const filtered = useMemo(() => {
     if (!data.regionSummary) return [];
     return catFilter === "Все" ? data.regionSummary : data.regionSummary.filter(r => r.category === catFilter);
-  }, [catFilter, data]);
+  }, [catFilter, data.regionSummary]);
 
-  const fP = filtered.reduce((s, r) => s + r.plan, 0), fF = filtered.reduce((s, r) => s + r.fact, 0), fPct = fP ? (fF / fP * 100).toFixed(1) : 0;
-  const top5 = useMemo(() => data.regionSummary ? [...data.regionSummary].sort((a, b) => b.pct - a.pct).slice(0, 5) : [], [data]);
-  const bot5 = useMemo(() => data.regionSummary ? [...data.regionSummary].sort((a, b) => a.pct - b.pct).slice(0, 5) : [], [data]);
+  const fP = useMemo(() => filtered.reduce((s, r) => s + r.plan, 0), [filtered]);
+  const fF = useMemo(() => filtered.reduce((s, r) => s + r.fact, 0), [filtered]);
+  const fPct = useMemo(() => fP ? (fF / fP * 100).toFixed(1) : 0, [fF, fP]);
+
+  const top5 = useMemo(() => data.regionSummary ? [...data.regionSummary].sort((a, b) => b.pct - a.pct).slice(0, 5) : [], [data.regionSummary]);
+  const bot5 = useMemo(() => data.regionSummary ? [...data.regionSummary].sort((a, b) => a.pct - b.pct).slice(0, 5) : [], [data.regionSummary]);
+
+  // UMUMIY PROGNOZ
+  const totalForecastPct = useMemo(() => 
+    calcForecast(data.totalFact || 0, data.totalPlan || 0, elapsedWorkDays, totalWorkDays),
+    [data.totalFact, data.totalPlan, elapsedWorkDays, totalWorkDays]
+  );
 
   return (
-    <div style={{ fontFamily: "'Merriweather Sans',sans-serif", background: "#FAFBFE", color: "#1a1a2e", minHeight: "100vh" }}>
+    <div style={{ fontFamily: "Arial, Calibri, sans-serif", background: "#FAFBFE", color: "#1a1a2e", minHeight: "100vh" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=Merriweather+Sans:wght@300;400;500;600;700&display=swap');
         *{box-sizing:border-box;margin:0}
@@ -280,22 +329,25 @@ export default function App() {
         .cd:hover{box-shadow:0 4px 20px rgba(0,0,0,.08)}
         .kp{background:#fff;border-radius:14px;padding:20px;border:1px solid #E8EAF0;box-shadow:0 2px 8px rgba(0,0,0,.03);position:relative;overflow:hidden}
         .st{width:5px;border-radius:3px;position:absolute;left:0;top:12px;bottom:12px}
-        .bt{padding:9px 20px;border-radius:24px;border:2px solid #E0E0E0;background:#fff;color:#546E7A;cursor:pointer;font-family:'Merriweather Sans';font-size:13px;font-weight:600;transition:all .25s}
+        .bt{padding:9px 20px;border-radius:24px;border:2px solid #E0E0E0;background:#fff;color:#546E7A;cursor:pointer;font-family:Arial,Calibri,sans-serif;font-size:13px;font-weight:600;transition:all .25s}
         .bt.a{background:#1565C0;color:#fff;border-color:#1565C0;box-shadow:0 3px 12px rgba(21,101,192,.3)}
         .bt:hover:not(.a){border-color:#1565C0;color:#1565C0}
         table{width:100%;border-collapse:separate;border-spacing:0}
         thead{background:#F5F7FA}
-        th{text-align:left;padding:12px;font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px;color:#78909C;font-weight:700;border-bottom:2px solid #E0E0E0}
-        td{padding:11px 12px;font-size:13px;border-bottom:1px solid #F0F0F0}
+        th{text-align:left;padding:12px;font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px;color:#78909C;font-weight:700;border-bottom:2px solid #E0E0E0;font-family:Arial,Calibri,sans-serif}
+        td{padding:11px 12px;font-size:13px;border-bottom:1px solid #F0F0F0;font-family:Arial,Calibri,sans-serif}
         tr:hover td{background:#F8FAFF}
         .br{height:7px;border-radius:4px;background:#ECEFF1;overflow:hidden;min-width:80px}
         .fl{height:100%;border-radius:4px;transition:width .5s ease-out}
-        .bg{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase}
+        .bg{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;font-family:Arial,Calibri,sans-serif}
         .pf{font-family:'Playfair Display',serif}
+        .pct-val{font-family:Arial,Calibri,sans-serif;font-weight:800}
         @keyframes fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         .an{animation:fu .45s ease forwards}
-        .ab{position:absolute;top:14px;right:16px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Merriweather Sans';backdrop-filter:blur(4px);transition:all .2s;z-index:2}
+        .ab{position:absolute;top:14px;right:16px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;font-family:Arial,Calibri,sans-serif;backdrop-filter:blur(4px);transition:all .2s;z-index:2}
         .ab:hover{background:rgba(255,255,255,.3)}
+        .wday-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;font-family:Arial,Calibri,sans-serif;backdrop-filter:blur(4px)}
+        .forecast-row{margin-top:6px;display:flex;align-items:center;gap:6px;font-size:11.5px;color:rgba(255,255,255,.85)}
       `}</style>
 
       {showAdmin && <AdminModal onClose={() => setShowAdmin(false)} onPublish={d => setData(d)} uploadDate={data.uploadDate} />}
@@ -305,19 +357,44 @@ export default function App() {
         <button className="ab" onClick={() => setShowAdmin(true)}>⚙️ Admin</button>
         <div style={{ position: "relative", zIndex: 1 }}>
           <h1 className="pf" style={{ fontSize: 26, fontWeight: 800 }}>Апрель 2026 — Сотув Аналитикаси</h1>
-          <p style={{ opacity: .75, fontSize: 13, marginTop: 6 }}>
-            {data.daily?.length || 0} кун · 3 ташкилот · {data.regionSummary?.length || 0} регион · {data.agentSummary?.length || 0} агент
-            {data.uploadDate && <span> · Янгиланган: {data.uploadDate}</span>}
-          </p>
+          <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {/* Ish kunlari badge */}
+            <span className="wday-badge">
+              📅 Oy: {totalWorkDays} ish kuni
+            </span>
+            <span className="wday-badge">
+              ⏱️ Bugun: {elapsedWorkDays}-ish kuni
+            </span>
+            <span style={{ opacity: .7, fontSize: 13, fontFamily: "Arial,Calibri,sans-serif" }}>
+              {data.daily?.length || 0} кун · 3 ташкилот · {data.regionSummary?.length || 0} регион · {data.agentSummary?.length || 0} агент
+              {data.uploadDate && <span> · Янгиланган: {data.uploadDate}</span>}
+            </span>
+          </div>
         </div>
       </div>
 
       <div style={{ padding: "22px 24px" }}>
         {/* KPIs */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 24 }} className="an">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }} className="an">
           {[
             { l: "Умумий план", v: fmt(data.totalPlan || 0), s: "Апрель 2026", c: "#1565C0", i: "🎯" },
-            { l: "Факт сотув", v: fmt(data.totalFact || 0), s: (data.totalPct || 0) + "% бажарилган", c: "#2E7D32", i: "💰" },
+            {
+              l: "Факт сотув",
+              v: fmt(data.totalFact || 0),
+              extra: (
+                <div style={{ marginTop: 4 }}>
+                  <span className="pct-val" style={{ fontSize: 13, color: pc(data.totalPct || 0), background: pb(data.totalPct || 0), padding: "2px 7px", borderRadius: 5 }}>
+                    {data.totalPct || 0}% бажарилди
+                  </span>
+                  {totalForecastPct > 0 && (
+                    <span className="pct-val" style={{ marginLeft: 6, fontSize: 12, color: "#0D47A1", background: "#E3F2FD", padding: "2px 7px", borderRadius: 5 }}>
+                      📈 {totalForecastPct}% прогноз
+                    </span>
+                  )}
+                </div>
+              ),
+              c: "#2E7D32", i: "💰"
+            },
             { l: "Қолган сумма", v: fmt((data.totalPlan || 0) - (data.totalFact || 0)), s: (100 - (data.totalPct || 0)).toFixed(1) + "% қолди", c: "#E65100", i: "📉" },
             { 
               l: "Торг. точкалар", 
@@ -330,12 +407,13 @@ export default function App() {
               })(), 
               c: "#AD1457", 
               i: "🏪" 
-            },          ].map((k, i) => (
+            },
+          ].map((k, i) => (
             <div key={i} className="kp"><div className="st" style={{ background: k.c }} />
               <div style={{ paddingLeft: 12 }}>
-                <div style={{ fontSize: 10.5, color: "#90A4AE", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>{k.l}</div>
+                <div style={{ fontSize: 10.5, color: "#90A4AE", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700, fontFamily: "Arial,Calibri,sans-serif" }}>{k.l}</div>
                 <div className="pf" style={{ fontSize: 26, fontWeight: 800, color: k.c, marginTop: 5 }}>{k.v}</div>
-                <div style={{ fontSize: 12, color: "#78909C", marginTop: 3 }}>{k.s}</div>
+                {k.extra ? k.extra : <div style={{ fontSize: 12, color: "#78909C", marginTop: 3, fontFamily: "Arial,Calibri,sans-serif" }}>{k.s}</div>}
               </div>
               <div style={{ position: "absolute", top: 10, right: 14, fontSize: 34, opacity: .1 }}>{k.i}</div>
             </div>
@@ -343,22 +421,39 @@ export default function App() {
         </div>
 
         {/* ORG CARDS */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 24 }} className="an">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 24 }} className="an">
           {data.orgSummary?.map((o, i) => {
             const r = 40, circ = 2 * Math.PI * r, off = circ - (Math.min(o.pct, 100) / 100) * circ;
+            const forecastPct = calcForecast(o.fact, o.plan, elapsedWorkDays, totalWorkDays);
+            const fOff = circ - (Math.min(forecastPct, 100) / 100) * circ;
             return (
-              <div key={i} className="cd" style={{ display: "flex", alignItems: "center", gap: 18, borderTop: `4px solid ${o.color}` }}>
+              <div key={i} className="cd" style={{ display: "flex", alignItems: "flex-start", gap: 18, borderTop: `4px solid ${o.color}` }}>
                 <div style={{ position: "relative", width: 90, height: 90, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <svg width={90} height={90} style={{ transform: "rotate(-90deg)" }}>
                     <circle cx={45} cy={45} r={r} fill="none" stroke="#ECEFF1" strokeWidth={7} />
+                    {forecastPct > o.pct && (
+                      <circle cx={45} cy={45} r={r} fill="none" stroke={o.color} strokeWidth={7}
+                        strokeDasharray={circ} strokeDashoffset={fOff}
+                        strokeLinecap="round" opacity={0.25} />
+                    )}
                     <circle cx={45} cy={45} r={r} fill="none" stroke={o.color} strokeWidth={7} strokeDasharray={circ} strokeDashoffset={off} strokeLinecap="round" />
                   </svg>
-                  <span className="pf" style={{ position: "absolute", fontSize: 16, fontWeight: 800, color: o.color }}>{o.pct}%</span>
+                  <span className="pct-val" style={{ position: "absolute", fontSize: 15, color: o.color }}>{o.pct}%</span>
                 </div>
-                <div>
+                <div style={{ flex: 1, paddingTop: 4 }}>
                   <div className="pf" style={{ fontSize: 16, fontWeight: 700, color: "#263238" }}>{o.org}</div>
-                  <div style={{ fontSize: 12, color: "#90A4AE", marginTop: 5 }}>План: <b style={{ color: "#455A64" }}>{fmt(o.plan)}</b></div>
-                  <div style={{ fontSize: 12, color: "#90A4AE" }}>Факт: <b style={{ color: o.color }}>{fmt(o.fact)}</b></div>
+                  <div style={{ fontSize: 12, color: "#90A4AE", marginTop: 5, fontFamily: "Arial,Calibri,sans-serif" }}>
+                    План: <b style={{ color: "#455A64" }}>{fmt(o.plan)}</b>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#90A4AE", fontFamily: "Arial,Calibri,sans-serif" }}>
+                    Факт: <b style={{ color: o.color }}>{fmt(o.fact)}</b>
+                  </div>
+                  {forecastPct > 0 && (
+                    <div style={{ marginTop: 7, padding: "4px 8px", background: "#E3F2FD", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ fontSize: 11, color: "#546E7A", fontFamily: "Arial,Calibri,sans-serif" }}>📈 Прогноз:</span>
+                      <span className="pct-val" style={{ fontSize: 13, color: forecastPct >= 100 ? "#2E7D32" : "#0D47A1" }}>{forecastPct}%</span>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -371,10 +466,10 @@ export default function App() {
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={data.daily || []}>
               <CartesianGrid strokeDasharray="4 4" stroke="#E0E0E0" />
-              <XAxis dataKey="dateLabel" tick={{ fill: "#78909C", fontSize: 12, fontWeight: 600 }} />
-              <YAxis tick={{ fill: "#78909C", fontSize: 10 }} tickFormatter={fmt} />
-              <Tooltip contentStyle={{ background: "#FFF", border: "1px solid #E0E0E0", borderRadius: 10, fontSize: 12, boxShadow: "0 4px 16px rgba(0,0,0,.06)" }} formatter={v => [fmt(v), ""]} />
-              <Legend wrapperStyle={{ fontSize: 11, fontWeight: 600 }} />
+              <XAxis dataKey="dateLabel" tick={{ fill: "#78909C", fontSize: 12, fontWeight: 600, fontFamily: "Arial,Calibri,sans-serif" }} />
+              <YAxis tick={{ fill: "#78909C", fontSize: 10, fontFamily: "Arial,Calibri,sans-serif" }} tickFormatter={fmt} />
+              <Tooltip contentStyle={{ background: "#FFF", border: "1px solid #E0E0E0", borderRadius: 10, fontSize: 12, boxShadow: "0 4px 16px rgba(0,0,0,.06)", fontFamily: "Arial,Calibri,sans-serif" }} formatter={v => [fmt(v), ""]} />
+              <Legend wrapperStyle={{ fontSize: 11, fontWeight: 600, fontFamily: "Arial,Calibri,sans-serif" }} />
               <Line type="monotone" dataKey="total" stroke="#1565C0" strokeWidth={3} name="Жами" dot={{ r: 5, fill: "#1565C0", stroke: "#fff", strokeWidth: 2 }} />
               <Line type="monotone" dataKey="DT" stroke="#E53935" strokeWidth={2} name="DELI TORG" dot={{ r: 3 }} />
               <Line type="monotone" dataKey="GT" stroke="#1E88E5" strokeWidth={2} name="GRAND TRADING" dot={{ r: 3 }} />
@@ -384,14 +479,14 @@ export default function App() {
         </div>
 
         {/* TOP / BOTTOM */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }} className="an">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 24 }} className="an">
           <div className="cd" style={{ borderTop: "4px solid #2E7D32" }}>
             <h3 className="pf" style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, color: "#2E7D32" }}>🏆 Топ-5 регионлар</h3>
             {top5.map((r, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, padding: "7px 10px", borderRadius: 8, background: i === 0 ? "#E8F5E9" : "#FAFAFA" }}>
                 <span style={{ fontSize: 20, width: 30, textAlign: "center" }}>{["🥇","🥈","🥉","4️⃣","5️⃣"][i]}</span>
-                <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "#37474F" }}>{r.region}</span>
-                <span className="pf" style={{ fontWeight: 800, color: pc(r.pct), fontSize: 15 }}>{r.pct}%</span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "#37474F", fontFamily: "Arial,Calibri,sans-serif" }}>{r.region}</span>
+                <span className="pct-val" style={{ color: pc(r.pct), fontSize: 15 }}>{r.pct}%</span>
               </div>
             ))}
           </div>
@@ -399,9 +494,9 @@ export default function App() {
             <h3 className="pf" style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, color: "#C62828" }}>⚠️ Паст-5 регионлар</h3>
             {bot5.map((r, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, padding: "7px 10px", borderRadius: 8, background: i === 0 ? "#FFEBEE" : "#FAFAFA" }}>
-                <span style={{ width: 30, textAlign: "center", fontWeight: 800, color: "#C62828", fontSize: 15 }}>{i + 1}</span>
-                <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "#37474F" }}>{r.region}</span>
-                <span className="pf" style={{ fontWeight: 800, color: "#C62828", fontSize: 15 }}>{r.pct}%</span>
+                <span style={{ width: 30, textAlign: "center", fontWeight: 800, color: "#C62828", fontSize: 15, fontFamily: "Arial,Calibri,sans-serif" }}>{i + 1}</span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "#37474F", fontFamily: "Arial,Calibri,sans-serif" }}>{r.region}</span>
+                <span className="pct-val" style={{ color: "#C62828", fontSize: 15 }}>{r.pct}%</span>
               </div>
             ))}
           </div>
@@ -420,70 +515,62 @@ export default function App() {
                 {c === "Все" ? "Барчаси" : c}
               </button>
             ))}
-            {catFilter !== "Все" && <span style={{ marginLeft: "auto", fontSize: 12, color: "#78909C" }}>
-              План: <b style={{ color: "#1565C0" }}>{fmt(fP)}</b> · Факт: <b style={{ color: "#2E7D32" }}>{fmt(fF)}</b> · <b style={{ color: pc(+fPct) }}>{fPct}%</b>
+            {catFilter !== "Все" && <span style={{ marginLeft: "auto", fontSize: 12, color: "#78909C", fontFamily: "Arial,Calibri,sans-serif" }}>
+              План: <b style={{ color: "#1565C0" }}>{fmt(fP)}</b> · Факт: <b style={{ color: "#2E7D32" }}>{fmt(fF)}</b> · <b className="pct-val" style={{ color: pc(+fPct) }}>{fPct}%</b>
             </span>}
           </div>
         )}
 
-        {/* REGION TABLE */}
-        {tab === "regions" && (
-          <div className="cd an" style={{ padding: 0, overflowX: "auto" }}>
-            <table><thead><tr>
-              <th>#</th><th>Регион</th><th>Категория</th><th style={{ textAlign: "right" }}>План</th><th style={{ textAlign: "right" }}>Факт</th>
-              <th style={{ textAlign: "center" }}>АКБ</th><th style={{ textAlign: "center" }}>Точки</th><th style={{ width: 110 }}>Прогресс</th><th style={{ textAlign: "right" }}>%</th>
-            </tr></thead><tbody>
-              {filtered.sort((a, b) => b.pct - a.pct).map((r, i) => (
+        {/* TABLES */}
+        <div className="cd an" style={{ padding: 0, overflowX: "auto" }}>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>{tab === "regions" ? "Регион" : "Агент"}</th>
+                <th>{tab === "regions" ? "Категория" : "Регионлар"}</th>
+                <th style={{ textAlign: "right" }}>План</th>
+                <th style={{ textAlign: "right" }}>Факт</th>
+                <th style={{ textAlign: "center" }}>АКБ</th>
+                <th style={{ textAlign: "center" }}>Точки</th>
+                <th style={{ width: 110 }}>Прогресс</th>
+                <th style={{ textAlign: "right" }}>%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(tab === "regions" ? filtered : (data.agentSummary || [])).sort((a, b) => b.pct - a.pct).map((item, i) => (
                 <tr key={i}>
                   <td style={{ color: "#B0BEC5", fontWeight: 700 }}>{i + 1}</td>
-                  <td style={{ fontWeight: 600, color: "#263238" }}>{r.region}</td>
-                  <td><span className="bg" style={{ background: r.category === "Tashkent" ? "#E3F2FD" : r.category === "Солнечный" ? "#FFF8E1" : "#E8F5E9", color: r.category === "Tashkent" ? "#1565C0" : r.category === "Солнечный" ? "#F57F17" : "#2E7D32" }}>{r.category}</span></td>
-                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: "#546E7A" }}>{fmt(r.plan)}</td>
-                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 600, color: "#2E7D32" }}>{fmt(r.fact)}</td>
-                  <td style={{ textAlign: "center", color: "#78909C" }}>{r.plan_akb}</td>
-                  <td style={{ textAlign: "center", fontWeight: 700, color: "#E65100" }}>{r.fact_tochka}</td>
-                  <td><div className="br"><div className="fl" style={{ width: Math.min(r.pct, 100) + "%", background: pc(r.pct) }} /></div></td>
-                  <td style={{ textAlign: "right" }}><span className="pf" style={{ fontWeight: 800, fontSize: 13, color: pc(r.pct), background: pb(r.pct), padding: "3px 7px", borderRadius: 6 }}>{r.pct}%</span></td>
+                  <td style={{ fontWeight: 600, color: "#263238" }}>{item.region || item.agent}</td>
+                  <td>
+                    {tab === "regions" ? (
+                      <span className="bg" style={{ background: item.category === "Tashkent" ? "#E3F2FD" : item.category === "Солнечный" ? "#FFF8E1" : "#E8F5E9", color: item.category === "Tashkent" ? "#1565C0" : item.category === "Солнечный" ? "#F57F17" : "#2E7D32" }}>{item.category}</span>
+                    ) : (
+                      <span style={{ fontSize: 11, color: "#90A4AE" }}>{item.regions}</span>
+                    )}
+                  </td>
+                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: "#546E7A" }}>{fmt(item.plan)}</td>
+                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 600, color: "#2E7D32" }}>{fmt(item.fact)}</td>
+                  <td style={{ textAlign: "center", color: "#78909C" }}>{item.plan_akb}</td>
+                  <td style={{ textAlign: "center", fontWeight: 700, color: "#E65100" }}>{item.fact_tochka}</td>
+                  <td><div className="br"><div className="fl" style={{ width: Math.min(item.pct, 100) + "%", background: pc(item.pct) }} /></div></td>
+                  <td style={{ textAlign: "right" }}><span className="pct-val" style={{ fontSize: 13, color: pc(item.pct), background: pb(item.pct), padding: "3px 7px", borderRadius: 6 }}>{item.pct}%</span></td>
                 </tr>
               ))}
-            </tbody></table>
-          </div>
-        )}
-
-        {/* AGENT TABLE */}
-        {tab === "agents" && (
-          <div className="cd an" style={{ padding: 0, overflowX: "auto" }}>
-            <table><thead><tr>
-              <th>#</th><th>Агент</th><th>Регионлар</th><th style={{ textAlign: "right" }}>План</th><th style={{ textAlign: "right" }}>Факт</th>
-              <th style={{ textAlign: "center" }}>АКБ</th><th style={{ textAlign: "center" }}>Точки</th><th style={{ width: 110 }}>Прогресс</th><th style={{ textAlign: "right" }}>%</th>
-            </tr></thead><tbody>
-              {(data.agentSummary || []).sort((a, b) => b.pct - a.pct).map((a, i) => (
-                <tr key={i}>
-                  <td style={{ color: "#B0BEC5", fontWeight: 700 }}>{i + 1}</td>
-                  <td style={{ fontWeight: 700, color: "#263238" }}>{a.agent}</td>
-                  <td style={{ fontSize: 11, color: "#90A4AE" }}>{a.regions}</td>
-                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: "#546E7A" }}>{fmt(a.plan)}</td>
-                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 600, color: "#2E7D32" }}>{fmt(a.fact)}</td>
-                  <td style={{ textAlign: "center", color: "#78909C" }}>{a.plan_akb}</td>
-                  <td style={{ textAlign: "center", fontWeight: 700, color: "#E65100" }}>{a.fact_tochka}</td>
-                  <td><div className="br"><div className="fl" style={{ width: Math.min(a.pct, 100) + "%", background: pc(a.pct) }} /></div></td>
-                  <td style={{ textAlign: "right" }}><span className="pf" style={{ fontWeight: 800, fontSize: 13, color: pc(a.pct), background: pb(a.pct), padding: "3px 7px", borderRadius: 6 }}>{a.pct}%</span></td>
-                </tr>
-              ))}
-            </tbody></table>
-          </div>
-        )}
+            </tbody>
+          </table>
+        </div>
 
         {/* BAR CHART */}
         <div className="cd an" style={{ marginTop: 24, padding: 22 }}>
-          <h3 className="pf" style={{ fontSize: 18, fontWeight: 700, marginBottom: 18, color: "#263238" }}>Регионлар — План ва Факт</h3>
-          <ResponsiveContainer width="100%" height={360}>
+          <h3 className="pf" style={{ fontSize: 18, fontWeight: 700, marginBottom: 18, color: "#263238" }}>Регионлар бўйича сотуv (Топ-10)</h3>
+          <ResponsiveContainer width="100%" height={350}>
             <BarChart data={data.regionSummary ? [...data.regionSummary].sort((a, b) => b.fact - a.fact).slice(0, 10) : []} layout="vertical">
               <CartesianGrid strokeDasharray="4 4" stroke="#E0E0E0" />
-              <XAxis type="number" tick={{ fill: "#78909C", fontSize: 10 }} tickFormatter={fmt} />
-              <YAxis type="category" dataKey="region" tick={{ fill: "#455A64", fontSize: 11, fontWeight: 600 }} width={100} />
-              <Tooltip formatter={v => [fmt(v), ""]} />
-              <Legend wrapperStyle={{ fontSize: 11, fontWeight: 600 }} />
+              <XAxis type="number" tick={{ fill: "#78909C", fontSize: 10, fontFamily: "Arial,Calibri,sans-serif" }} tickFormatter={fmt} />
+              <YAxis type="category" dataKey="region" tick={{ fill: "#455A64", fontSize: 11, fontWeight: 600, fontFamily: "Arial,Calibri,sans-serif" }} width={100} />
+              <Tooltip formatter={v => [fmt(v), ""]} contentStyle={{ fontFamily: "Arial,Calibri,sans-serif" }} />
+              <Legend wrapperStyle={{ fontSize: 11, fontWeight: 600, fontFamily: "Arial,Calibri,sans-serif" }} />
               <Bar dataKey="plan" fill="#BBDEFB" name="План" radius={[0, 4, 4, 0]} />
               <Bar dataKey="fact" fill="#1565C0" name="Факт" radius={[0, 4, 4, 0]} />
             </BarChart>
@@ -491,7 +578,7 @@ export default function App() {
         </div>
 
         {/* PIE + SUMMARY */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginTop: 24 }}>
           <div className="cd an" style={{ padding: 22 }}>
             <h3 className="pf" style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, color: "#263238" }}>Факт бўйича улуш</h3>
             <ResponsiveContainer width="100%" height={230}>
@@ -500,23 +587,32 @@ export default function App() {
                   label={({ org, pct }) => `${org} ${pct}%`} labelLine={{ stroke: "#B0BEC5" }} strokeWidth={2} stroke="#fff">
                   {data.orgSummary?.map((o, i) => <Cell key={i} fill={o.color} />)}
                 </Pie>
-                <Tooltip formatter={v => [fmt(v), ""]} />
+                <Tooltip formatter={v => [fmt(v), ""]} contentStyle={{ fontFamily: "Arial,Calibri,sans-serif" }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
           <div className="cd an" style={{ padding: 22 }}>
             <h3 className="pf" style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, color: "#263238" }}>Хулоса</h3>
-            <div style={{ fontSize: 13.5, lineHeight: 2.2, color: "#455A64" }}>
-              <div>🔴 Жами: <b style={{ color: pc(data.totalPct || 0), fontSize: 15 }}>{data.totalPct || 0}%</b></div>
-              {(() => { const b = data.regionSummary ? [...data.regionSummary].sort((a, b) => b.pct - a.pct)[0] : null; return b ? <div>🟢 Энг яхши: <b style={{ color: "#2E7D32" }}>{b.region} — {b.pct}%</b></div> : null; })()}
-              {data.orgSummary?.map((o, i) => <div key={i}>{["🔴","🔵","🟡"][i]} {o.org}: <b style={{ color: o.color }}>{o.pct}%</b></div>)}
-              {(() => { const b = data.agentSummary ? [...data.agentSummary].sort((a, b) => b.pct - a.pct)[0] : null; return b ? <div>👤 Топ: <b style={{ color: "#AD1457" }}>{b.agent} — {b.pct}%</b></div> : null; })()}
-              {(() => { const z = data.regionSummary?.filter(r => r.pct === 0) || []; return z.length ? <div>⚠️ 0%: <b style={{ color: "#C62828" }}>{z.map(r => r.region).join(", ")}</b></div> : null; })()}
+            <div style={{ fontSize: 13.5, lineHeight: 2.2, color: "#455A64", fontFamily: "Arial,Calibri,sans-serif" }}>
+              <div>🔴 Жами: <b className="pct-val" style={{ color: pc(data.totalPct || 0), fontSize: 15 }}>{data.totalPct || 0}%</b>
+                {totalForecastPct > 0 && <span style={{ marginLeft: 8, fontSize: 12, color: "#0D47A1" }}>📈 Прогноз: <b className="pct-val">{totalForecastPct}%</b></span>}
+              </div>
+              {(() => { const b = data.regionSummary ? [...data.regionSummary].sort((a, b) => b.pct - a.pct)[0] : null; return b ? <div>🟢 Энг яхши: <b className="pct-val" style={{ color: "#2E7D32" }}>{b.region} — {item.pct}%</b></div> : null; })()}
+              {data.orgSummary?.map((o, i) => {
+                const fp = calcForecast(o.fact, o.plan, elapsedWorkDays, totalWorkDays);
+                return (
+                  <div key={i}>{["🔴","🔵","🟡"][i]} {o.org}: <b className="pct-val" style={{ color: o.color }}>{o.pct}%</b>
+                    {fp > 0 && <span style={{ marginLeft: 6, fontSize: 12, color: "#546E7A" }}>📈 <b className="pct-val">{fp}%</b></span>}
+                  </div>
+                );
+              })}
+              {(() => { const b = data.agentSummary ? [...data.agentSummary].sort((a, b) => b.pct - a.pct)[0] : null; return b ? <div>👤 Топ: <b className="pct-val" style={{ color: "#AD1457" }}>{b.agent} — {b.pct}%</b></div> : null; })()}
+              {(() => { const z = data.regionSummary?.filter(r => r.pct === 0) || []; return z.length ? <div>⚠️ 0%: <b className="pct-val" style={{ color: "#C62828" }}>{z.map(r => r.region).join(", ")}</b></div> : null; })()}
             </div>
           </div>
         </div>
 
-        <div style={{ textAlign: "center", padding: "24px 0 8px", color: "#B0BEC5", fontSize: 11, letterSpacing: 1 }}>
+        <div style={{ textAlign: "center", padding: "24px 0 8px", color: "#B0BEC5", fontSize: 11, letterSpacing: 1, fontFamily: "Arial,Calibri,sans-serif" }}>
           АПРЕЛЬ 2026 · DELI TORG · GRAND TRADING · SIGNUM
         </div>
       </div>
