@@ -597,7 +597,7 @@ export default function App() {
               <div>🔴 Жами: <b className="pct-val" style={{ color: pc(data.totalPct || 0), fontSize: 15 }}>{data.totalPct || 0}%</b>
                 {totalForecastPct > 0 && <span style={{ marginLeft: 8, fontSize: 12, color: "#0D47A1" }}>📈 Прогноз: <b className="pct-val">{totalForecastPct}%</b></span>}
               </div>
-              {(() => { const b = data.regionSummary ? [...data.regionSummary].sort((a, b) => b.pct - a.pct)[0] : null; return b ? <div>🟢 Энг яхши: <b className="pct-val" style={{ color: "#2E7D32" }}>{b.region} — {item.pct}%</b></div> : null; })()}
+              {(() => { const b = data.regionSummary ? [...data.regionSummary].sort((a, b) => b.pct - a.pct)[0] : null; return b ? <div>🟢 Энг яхши: <b className="pct-val" style={{ color: "#2E7D32" }}>{b.region} — {b.pct}%</b></div> : null; })()}
               {data.orgSummary?.map((o, i) => {
                 const fp = calcForecast(o.fact, o.plan, elapsedWorkDays, totalWorkDays);
                 return (
