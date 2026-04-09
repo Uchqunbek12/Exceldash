@@ -563,7 +563,7 @@ export default function App() {
 
         {/* BAR CHART */}
         <div className="cd an" style={{ marginTop: 24, padding: 22 }}>
-          <h3 className="pf" style={{ fontSize: 18, fontWeight: 700, marginBottom: 18, color: "#263238" }}>Регионлар бўйича сотуv (Топ-10)</h3>
+          <h3 className="pf" style={{ fontSize: 18, fontWeight: 700, marginBottom: 18, color: "#263238" }}>Регионлар бўйича сотув (Топ-10)</h3>
           <ResponsiveContainer width="100%" height={350}>
             <BarChart data={data.regionSummary ? [...data.regionSummary].sort((a, b) => b.fact - a.fact).slice(0, 10) : []} layout="vertical">
               <CartesianGrid strokeDasharray="4 4" stroke="#E0E0E0" />
